@@ -27,7 +27,7 @@ conditions; (d) power into a resistive load for neat and filled films.*
 | `examples/design_study.py` | Generates the figure above and a device comparison table |
 | `examples/reproduce_paper.py` | Regenerates every manuscript figure and writes every quoted number to `paper/results/` |
 | `paper/manuscript.tex`, `paper/manuscript.pdf` | Revised manuscript (LaTeX) |
-| `paper/response_to_reviewer.md`, `paper/response_to_reviewer_round2.md` | Point-by-point responses to the two reviews |
+| `paper/response_to_reviewer*.md` | Point-by-point responses to the three reviews |
 | `environment-lock.txt` | Exact versions used to produce the paper's results |
 | `tests/` | pytest suite checking limits, bounds and internal consistency |
 

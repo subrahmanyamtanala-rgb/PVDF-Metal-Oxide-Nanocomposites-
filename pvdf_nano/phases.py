@@ -47,6 +47,26 @@ def electroactive_fraction(a_763: float, a_840: float) -> float:
     return a_840 / denom
 
 
+def electroactive_fraction_uncertainty(a_763: float, a_840: float,
+                                       sigma_763: float, sigma_840: float) -> float:
+    """Standard uncertainty of F_EA from independent absorbance uncertainties.
+
+    First-order propagation through Eq. F_EA = A_840 / (k A_763 + A_840),
+    k = K_840 / K_763:
+
+        dF/dA_840 =  k A_763 / D^2,   dF/dA_763 = -k A_840 / D^2,
+        D = k A_763 + A_840.
+
+    sigma_763 and sigma_840 are typically the standard deviations of
+    replicate, baseline-corrected spectra.
+    """
+    k = K_EA_840 / K_ALPHA_763
+    d = k * a_763 + a_840
+    if d <= 0:
+        raise ValueError("absorbances must not both be zero")
+    return math.hypot(k * a_763 / d ** 2 * sigma_840, k * a_840 / d ** 2 * sigma_763)
+
+
 def split_beta_gamma(f_ea: float, dh_1275: float, dh_1234: float):
     """Split the electroactive fraction into beta and gamma parts.
 

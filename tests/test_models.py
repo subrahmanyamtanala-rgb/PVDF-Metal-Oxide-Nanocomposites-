@@ -314,3 +314,14 @@ def test_morris_detects_interaction():
     bounds = [("a", 0.0, 1.0, "lin"), ("b", 0.0, 1.0, "lin")]
     res = sensitivity.morris(lambda p: p["a"] * p["b"], bounds, r=40, seed=3)
     assert res["a"]["sigma"] > 0.1
+
+
+def test_fea_uncertainty_matches_finite_difference():
+    a763, a840, s = 0.2, 0.5, 0.01
+    num_840 = (phases.electroactive_fraction(a763, a840 + 1e-6)
+               - phases.electroactive_fraction(a763, a840)) / 1e-6
+    num_763 = (phases.electroactive_fraction(a763 + 1e-6, a840)
+               - phases.electroactive_fraction(a763, a840)) / 1e-6
+    expected = np.hypot(num_840 * s, num_763 * s)
+    assert phases.electroactive_fraction_uncertainty(a763, a840, s, s) == pytest.approx(
+        expected, rel=1e-4)

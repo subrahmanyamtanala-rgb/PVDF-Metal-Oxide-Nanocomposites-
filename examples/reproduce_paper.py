@@ -608,6 +608,64 @@ def fig_benchmark():
     summary["benchmark_vol_pct_of_2wt"] = round(wt_to_vol(0.02) * 100, 3)
 
 
+# --- Figure 10: fixed versus measured (fitted) crystallinity --------------------------
+
+def fig_variable_xc():
+    """Case A: fixed X_c with the nominal law. Case B: X_c(phi) and F(phi) fitted to
+    Bagla et al. Shown as ratios to each case's own unfilled film."""
+    grid = np.geomspace(1e-4, 0.10, 300)
+    eps = dielectric.maxwell_garnett(M.eps_r, ZNO.eps_r, grid)
+    eps0 = M.eps_r
+    fig, axes = plt.subplots(1, 2, figsize=(6.8, 3.2))
+    rows = []
+    f_a = nucleation.saturating_law(grid, *nucleation.SCENARIOS["nominal"])
+    f_a0 = nucleation.saturating_law(0.0, *nucleation.SCENARIOS["nominal"])
+    d_ratio_a = (1 - grid) * f_a / f_a0
+    fom_ratio_a = d_ratio_a ** 2 * eps0 / eps
+    cases = {"A: fixed X$_c$ = 0.50, nominal law": (d_ratio_a, fom_ratio_a, ACCENT, "-")}
+    fitted = {}
+    for (name, data), ls in zip(BAGLA.items(), ("--", ":")):
+        phi = np.array([wt_to_vol(w / 100) for w, _, _ in data])
+        grid_fit = np.geomspace(1e-5, 0.05, 600)
+        fx = nucleation.fit_saturating_law(phi, [xc / 100 for _, xc, _ in data], grid_fit)
+        ff = nucleation.fit_saturating_law(phi, [fb / 100 for _, _, fb in data], grid_fit)
+        xc = nucleation.saturating_law(grid, fx["f0"], fx["delta_f"], fx["phi_sat"])
+        ff_ = nucleation.saturating_law(grid, ff["f0"], ff["delta_f"], ff["phi_sat"])
+        d_ratio = (1 - grid) * xc * ff_ / (fx["f0"] * ff["f0"])
+        cases[f"B: fitted X$_c$($\\phi$), F($\\phi$), {name}"] = (
+            d_ratio, d_ratio ** 2 * eps0 / eps, GREY, ls)
+        sat = fx["f0"] + fx["delta_f"], ff["f0"] + ff["delta_f"]
+        fitted[name] = {"xc0": round(fx["f0"], 3), "xc_sat": round(sat[0], 3),
+                        "f0": round(ff["f0"], 3), "f_sat": round(sat[1], 3),
+                        "abs_d33_matrix_sat_pCN": round(
+                            abs(piezo.matrix_d33(sat[0], sat[1])) * 1e12, 1)}
+    for label, (dr, fr, color, ls) in cases.items():
+        axes[0].semilogx(grid * 100, dr, color=color, ls=ls, lw=2, label=label)
+        axes[1].semilogx(grid * 100, fr, color=color, ls=ls, lw=2)
+        i10 = -1
+        i1 = int(np.argmin(np.abs(grid - 0.01)))
+        key = label.split(":")[0] + ("" if label.startswith("A") else "_" + label.split(", ")[-1])
+        summary[f"xc_case_{key}"] = {"d33_ratio_1vol": round(float(dr[i1]), 2),
+                                     "d33_ratio_10vol": round(float(dr[i10]), 2),
+                                     "fom_ratio_1vol": round(float(fr[i1]), 2),
+                                     "fom_ratio_10vol": round(float(fr[i10]), 2)}
+        rows += [(label, g * 100, a, b) for g, a, b in zip(grid, dr, fr)]
+    style(axes[0], "|d$_{33}$| relative to unfilled film", "ZnO loading (vol%)", "Ratio")
+    style(axes[1], "d$_{33}$g$_{33}$ relative to unfilled film", "ZnO loading (vol%)", "Ratio")
+    last_measured = wt_to_vol(0.02) * 100
+    for ax in axes:
+        ax.axhline(1, color=INK2, lw=0.8)
+        ax.axvspan(last_measured, 10, color=SHADE, zorder=0)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False, fontsize=7)
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    for ext in ("pdf", "png"):
+        fig.savefig(os.path.join(FIG_DIR, f"fig10_variable_xc.{ext}"), dpi=200, facecolor="white")
+    plt.close(fig)
+    write_csv("fig10_variable_xc", ["case", "vol_pct", "d33_ratio", "fom_ratio"], rows)
+    summary["variable_xc_fits"] = fitted
+
+
 def main():
     os.makedirs(FIG_DIR, exist_ok=True)
     os.makedirs(RES_DIR, exist_ok=True)
@@ -624,6 +682,7 @@ def main():
     fig_morris()
     lhs_comparison()
     fig_benchmark()
+    fig_variable_xc()
     with open(os.path.join(RES_DIR, "summary.json"), "w") as fh:
         json.dump(summary, fh, indent=1, default=float)
     print(json.dumps(summary, indent=1, default=float))

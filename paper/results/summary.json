@@ -677,5 +677,39 @@
    "phi_sat_resolved": true
   }
  },
- "benchmark_vol_pct_of_2wt": 0.643
+ "benchmark_vol_pct_of_2wt": 0.643,
+ "xc_case_A": {
+  "d33_ratio_1vol": 1.19,
+  "d33_ratio_10vol": 1.51,
+  "fom_ratio_1vol": 1.41,
+  "fom_ratio_10vol": 2.34
+ },
+ "xc_case_B_nanoparticles": {
+  "d33_ratio_1vol": 1.78,
+  "d33_ratio_10vol": 1.62,
+  "fom_ratio_1vol": 3.17,
+  "fom_ratio_10vol": 2.69
+ },
+ "xc_case_B_nanorods": {
+  "d33_ratio_1vol": 1.97,
+  "d33_ratio_10vol": 1.79,
+  "fom_ratio_1vol": 3.9,
+  "fom_ratio_10vol": 3.31
+ },
+ "variable_xc_fits": {
+  "nanoparticles": {
+   "xc0": 0.419,
+   "xc_sat": 0.66,
+   "f0": 0.831,
+   "f_sat": 0.948,
+   "abs_d33_matrix_sat_pCN": 41.2
+  },
+  "nanorods": {
+   "xc0": 0.42,
+   "xc_sat": 0.751,
+   "f0": 0.83,
+   "f_sat": 0.923,
+   "abs_d33_matrix_sat_pCN": 45.7
+  }
+ }
 }
