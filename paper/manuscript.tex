@@ -28,16 +28,10 @@
 \maketitle
 
 \begin{abstract}
-We develop a first-order, physics-based framework for analysing PVDF/\allowbreak metal-oxide nanocomposites for piezoelectric energy harvesting. The framework links PVDF phase content, interphase geometry, effective dielectric response, 0--3 piezoelectric coupling, and lossy electrical output under matched resistive loading. All results are model predictions based on explicitly stated assumptions and have not yet been experimentally validated. They are benchmarked against published measurements where these exist.
-
-Within the parameter range considered, the model indicates that nanoparticle-induced changes in PVDF polar-phase content can dominate the direct piezoelectric contribution of high-permittivity inclusions. For bulk-like \BTO{} in PVDF, the predicted dilute-limit local-field coefficient is about 0.021. For \BTO{} nanocrystals, whose measured permittivity is only about 80--300, it rises to 0.16--0.35. The dominance of polar-phase content then holds only if the filler $\dt$ falls in proportion to its permittivity, under the adopted electrostrictive scaling assumption.
-
-Results are reported across the assumed nucleation scenarios. At 10~vol\% ZnO, the predicted $\dt g_{33}$ varies from 2.13 to $7.68\times10^{-12}$~m$^2$/N, compared with $2.55\times10^{-12}$~m$^2$/N for unfilled PVDF. Weighting the $\gamma$-phase below $\beta$ can remove the gain entirely.
-
-Morris global screening identifies matrix $\dt$, poling efficiency and maximum polar-phase gain as the dominant parameters, with strong interactions. Particle-size calculations predict monotonic improvement for PVDF/ZnO toward the nanoscale. For the assumed interphase permittivity $\varepsilon_i=30$, PVDF/\BTO{} instead has a model-predicted optimum near 17~nm. A fit to published phase data for one electrospun PVDF/ZnO system supports a saturating nucleation law, but saturation occurs below 1~vol\%. Letting crystallinity vary as measured in that system raises the predicted $\dt$ gain at 1~vol\% from 1.2 to 1.8--2.0 times the unfilled film. The framework is thus checked at the level of individual assumptions, with full experimental validation proposed. It provides a quantitative basis for designing and experimentally validating PVDF--oxide nanocomposite harvesters.
+We develop a first-order, physics-based framework for poly(vinylidene fluoride) (PVDF)/\allowbreak metal-oxide nanocomposite piezoelectric energy harvesters. It links polar-phase content, interphase geometry, effective dielectric response, 0--3 piezoelectric coupling and lossy electrical output under matched resistive loading. All results are model predictions under explicitly stated assumptions; they are benchmarked against published measurements but not yet validated experimentally. Within the parameter range considered, nanoparticle-induced changes in PVDF polar-phase content can dominate the direct contribution of high-permittivity inclusions. For bulk-like \BTO{} the dilute-limit local-field coefficient is about 0.021, but for nanocrystals with measured permittivity of 80--300 it rises to 0.16--0.35. Polar-phase dominance then holds only if the filler $\dt$ scales with its permittivity, as the adopted electrostrictive scaling assumes. At 10~vol\% ZnO the predicted $\dt g_{33}$ spans 2.13--$7.68\times10^{-12}$~m$^2$/N across nucleation scenarios, against $2.55\times10^{-12}$~m$^2$/N for unfilled PVDF, and a weakly active $\gamma$-phase can remove the gain. Morris screening identifies matrix $\dt$, poling efficiency and polar-phase gain as dominant, with strong interactions. For the assumed interphase permittivity, PVDF/\BTO{} has a model-predicted optimum near 17~nm, whereas PVDF/ZnO improves monotonically as particles shrink. Published data for one electrospun PVDF/ZnO system support a saturating nucleation law that saturates below 1~vol\%. Letting crystallinity vary as measured raises the predicted $\dt$ gain at 1~vol\% from 1.2 to 1.8--2.0 times. The framework identifies which quantities experiments must measure and gives a protocol for doing so.
 \end{abstract}
 
-\noindent\textbf{Keywords:} PVDF; $\beta$-phase; nanocomposite; interphase; local field; Maxwell--Wagner--Sillars polarization; piezoelectric energy harvesting
+\noindent\textbf{Keywords:} PVDF; $\beta$-phase nucleation; polymer nanocomposites; interphase; piezoelectric energy harvesting; dielectric modelling
 
 %=====================================================================
 \section{Introduction}
@@ -528,29 +522,40 @@ We developed a first-order modeling framework that links PVDF phase content, int
 
 Global screening shows that matrix $\dt$, poling efficiency and polar-phase gain dominate the uncertainty, with strong interactions. A paired comparison finds the model-predicted advantage of PVDF/ZnO over PVDF/\BTO{} robust except when \BTO{} nanocrystals are assumed to retain bulk $\dt$. For the assumed interphase properties, the model predicts an optimum \BTO{} size near 17~nm, and conduction loss matters mainly at low frequency. Published data for one electrospun PVDF/ZnO system support a saturating nucleation law but saturate at much lower loading than assumed. Letting crystallinity vary as measured in that system makes the fixed-$X_c$ predictions conservative. The open implementation, the benchmark and the proposed validation protocol allow each assumption to be replaced by measurement.
 
-\section*{Code and data availability}
-The \texttt{pvdf\_nano} package (version 0.4.0), its 48 unit tests, the script \path{examples/reproduce_paper.py} that regenerates every figure, table and quoted number, and the generated data files are available at \url{https://github.com/subrahmanyamtanala-rgb/PVDF-Metal-Oxide-Nanocomposites-}. The results were produced with Python 3.11.15, NumPy 2.4.6 and Matplotlib 3.11.2 (\texttt{environment-lock.txt}). The full analysis runs in about 5~s on a single CPU core. \textcolor{red}{[AUTHORS: add license, release tag/commit and archive DOI before submission.]}
+\section*{Declarations}
+\paragraph{Funding} \textcolor{red}{[AUTHORS: state funding sources, or ``No funding was received for this work.'']}
+
+\paragraph{Competing interests} \textcolor{red}{[AUTHORS: state competing interests, or ``The authors declare no competing interests.'']}
+
+\paragraph{Author contributions} \textcolor{red}{[AUTHORS: CRediT statement.]}
+
+\paragraph{Ethics approval} Not applicable; this study involves no human participants, animals or personal data.
+
+\paragraph{Data availability} All data underlying the figures and tables are generated by the code below and are provided in \path{paper/results/} of the repository. Literature values used in Section~\ref{sec:bench} are taken from the cited articles.
+
+\paragraph{Code availability} The \texttt{pvdf\_nano} package (version 0.4.0), its 48 unit tests, the script \path{examples/reproduce_paper.py} that regenerates every figure, table and quoted number, and the generated data files are available at \url{https://github.com/subrahmanyamtanala-rgb/PVDF-Metal-Oxide-Nanocomposites-}. The results were produced with Python 3.11.15, NumPy 2.4.6 and Matplotlib 3.11.2 (\texttt{environment-lock.txt}). The full analysis runs in about 5~s on a single CPU core. \textcolor{red}{[AUTHORS: add license, release tag/commit and archive DOI before submission.]}
 
 %=====================================================================
+
 \begin{thebibliography}{99}
 \small
-\bibitem{Lovinger1983} A.~J. Lovinger, Ferroelectric polymers, \emph{Science} \textbf{220} (1983) 1115--1121. doi:10.1126/science.220.4602.1115.
-\bibitem{Gregorio1994} R.~Gregorio Jr., M.~Cestari, Effect of crystallization temperature on the crystalline phase content and morphology of poly(vinylidene fluoride), \emph{J. Polym. Sci. B: Polym. Phys.} \textbf{32} (1994) 859--870. doi:10.1002/polb.1994.090320509.
-\bibitem{Martins2014} P.~Martins, A.~C. Lopes, S.~Lanceros-Mendez, Electroactive phases of poly(vinylidene fluoride): determination, processing and applications, \emph{Prog. Polym. Sci.} \textbf{39} (2014) 683--706. doi:10.1016/j.progpolymsci.2013.07.006.
-\bibitem{Cai2017} X.~Cai, T.~Lei, D.~Sun, L.~Lin, A critical analysis of the $\alpha$, $\beta$ and $\gamma$ phases in poly(vinylidene fluoride) using FTIR, \emph{RSC Adv.} \textbf{7} (2017) 15382--15389. doi:10.1039/C7RA01267E.
+\bibitem{Lovinger1983} A.~J. Lovinger, Ferroelectric polymers, \emph{Science} \textbf{220} (1983) 1115--1121. \url{https://doi.org/10.1126/science.220.4602.1115}
+\bibitem{Gregorio1994} R.~Gregorio Jr., M.~Cestari, Effect of crystallization temperature on the crystalline phase content and morphology of poly(vinylidene fluoride), \emph{J. Polym. Sci. B: Polym. Phys.} \textbf{32} (1994) 859--870. \url{https://doi.org/10.1002/polb.1994.090320509}
+\bibitem{Martins2014} P.~Martins, A.~C. Lopes, S.~Lanceros-Mendez, Electroactive phases of poly(vinylidene fluoride): determination, processing and applications, \emph{Prog. Polym. Sci.} \textbf{39} (2014) 683--706. \url{https://doi.org/10.1016/j.progpolymsci.2013.07.006}
+\bibitem{Cai2017} X.~Cai, T.~Lei, D.~Sun, L.~Lin, A critical analysis of the $\alpha$, $\beta$ and $\gamma$ phases in poly(vinylidene fluoride) using FTIR, \emph{RSC Adv.} \textbf{7} (2017) 15382--15389. \url{https://doi.org/10.1039/C7RA01267E}
 \bibitem{Tanaka2005} T.~Tanaka, M.~Kozako, N.~Fuse, Y.~Ohki, Proposal of a multi-core model for polymer nanocomposite dielectrics, \emph{IEEE Trans. Dielectr. Electr. Insul.} \textbf{12} (2005) 669--681.
-\bibitem{Lewis2004} T.~J. Lewis, Interfaces are the dominant feature of dielectrics at nanometric dimensions, \emph{IEEE Trans. Dielectr. Electr. Insul.} \textbf{11} (2004) 739--753. doi:10.1109/TDEI.2004.1349779.
-\bibitem{Martins2012} P.~Martins, C.~M. Costa, M.~Benelmekki, G.~Botelho, S.~Lanceros-Mendez, On the origin of the electroactive poly(vinylidene fluoride) $\beta$-phase nucleation by ferrite nanoparticles via surface electrostatic interactions, \emph{CrystEngComm} \textbf{14} (2012) 2807--2811. doi:10.1039/C2CE06654H.
-\bibitem{Sebastian2016} M.~S. Sebastian \emph{et al.}, Understanding nucleation of the electroactive $\beta$-phase of poly(vinylidene fluoride) by nanostructures, \emph{RSC Adv.} \textbf{6} (2016) 113007--113015. doi:10.1039/C6RA24356H.
-\bibitem{Yamada1982} T.~Yamada, T.~Ueda, T.~Kitayama, Piezoelectricity of a high-content lead zirconate titanate/polymer composite, \emph{J. Appl. Phys.} \textbf{53} (1982) 4328--4332. doi:10.1063/1.331211.
-\bibitem{Katsouras2016} I.~Katsouras \emph{et al.}, The negative piezoelectric effect of the ferroelectric polymer poly(vinylidene fluoride), \emph{Nat. Mater.} \textbf{15} (2016) 78--84. doi:10.1038/nmat4423.
+\bibitem{Lewis2004} T.~J. Lewis, Interfaces are the dominant feature of dielectrics at nanometric dimensions, \emph{IEEE Trans. Dielectr. Electr. Insul.} \textbf{11} (2004) 739--753. \url{https://doi.org/10.1109/TDEI.2004.1349779}
+\bibitem{Martins2012} P.~Martins, C.~M. Costa, M.~Benelmekki, G.~Botelho, S.~Lanceros-Mendez, On the origin of the electroactive poly(vinylidene fluoride) $\beta$-phase nucleation by ferrite nanoparticles via surface electrostatic interactions, \emph{CrystEngComm} \textbf{14} (2012) 2807--2811. \url{https://doi.org/10.1039/C2CE06654H}
+\bibitem{Sebastian2016} M.~S. Sebastian \emph{et al.}, Understanding nucleation of the electroactive $\beta$-phase of poly(vinylidene fluoride) by nanostructures, \emph{RSC Adv.} \textbf{6} (2016) 113007--113015. \url{https://doi.org/10.1039/C6RA24356H}
+\bibitem{Yamada1982} T.~Yamada, T.~Ueda, T.~Kitayama, Piezoelectricity of a high-content lead zirconate titanate/polymer composite, \emph{J. Appl. Phys.} \textbf{53} (1982) 4328--4332. \url{https://doi.org/10.1063/1.331211}
+\bibitem{Katsouras2016} I.~Katsouras \emph{et al.}, The negative piezoelectric effect of the ferroelectric polymer poly(vinylidene fluoride), \emph{Nat. Mater.} \textbf{15} (2016) 78--84. \url{https://doi.org/10.1038/nmat4423}
 \bibitem{Furukawa1989} T.~Furukawa, Piezoelectricity and pyroelectricity in polymers, \emph{IEEE Trans. Electr. Insul.} \textbf{24} (1989) 375--394.
-\bibitem{Ploss2000} B.~Ploss, B.~Ploss, F.~G. Shin, H.~L.~W. Chan, C.~L. Choy, Pyroelectric or piezoelectric compensated ferroelectric composites, \emph{Appl. Phys. Lett.} \textbf{76} (2000) 2776--2778. doi:10.1063/1.126472.
+\bibitem{Ploss2000} B.~Ploss, B.~Ploss, F.~G. Shin, H.~L.~W. Chan, C.~L. Choy, Pyroelectric or piezoelectric compensated ferroelectric composites, \emph{Appl. Phys. Lett.} \textbf{76} (2000) 2776--2778. \url{https://doi.org/10.1063/1.126472}
 \bibitem{Hoshina2008} T.~Hoshina, S.~Wada, Y.~Kuroiwa, T.~Tsurumi, Composite structure and size effect of barium titanate nanoparticles, \emph{Appl. Phys. Lett.} \textbf{93} (2008) 192914.
-\bibitem{Li2024} Q.~Li, E.~Allahyarov, T.~Ju, Z.~Lin, L.~Zhu, Nonlinear ferroelectric characteristics of barium titanate nanocrystals determined via a polymer nanocomposite approach, \emph{Nanoscale} \textbf{16} (2024) 3606--3621. doi:10.1039/d3nr05185d.
+\bibitem{Li2024} Q.~Li, E.~Allahyarov, T.~Ju, Z.~Lin, L.~Zhu, Nonlinear ferroelectric characteristics of barium titanate nanocrystals determined via a polymer nanocomposite approach, \emph{Nanoscale} \textbf{16} (2024) 3606--3621. \url{https://doi.org/10.1039/d3nr05185d}
 \bibitem{Pylypchuk2024} O.~Pylypchuk \emph{et al.}, Effective dielectric response of dense ferroelectric nanocomposites, arXiv:2401.07311 (2024).
-\bibitem{Bagla2025} A.~Bagla, K.~Hembram, F.~Rault, F.~Sala\"un, S.~Sundarrajan, S.~Ramakrishna, S.~Mitra, ZnO@C/PVDF electrospun membrane as a piezoelectric nanogenerator for wearable applications, \emph{J. Phys. Chem. C} \textbf{129} (2025) 5808--5820. doi:10.1021/acs.jpcc.4c07913. Data taken from the open preprint, arXiv:2502.16547.
-\bibitem{Wang2006} Z.~L. Wang, J.~Song, Piezoelectric nanogenerators based on zinc oxide nanowire arrays, \emph{Science} \textbf{312} (2006) 242--246. doi:10.1126/science.1124005.
+\bibitem{Bagla2025} A.~Bagla, K.~Hembram, F.~Rault, F.~Sala\"un, S.~Sundarrajan, S.~Ramakrishna, S.~Mitra, ZnO@C/PVDF electrospun membrane as a piezoelectric nanogenerator for wearable applications, \emph{J. Phys. Chem. C} \textbf{129} (2025) 5808--5820. \url{https://doi.org/10.1021/acs.jpcc.4c07913} Data taken from the open preprint, arXiv:2502.16547.
+\bibitem{Wang2006} Z.~L. Wang, J.~Song, Piezoelectric nanogenerators based on zinc oxide nanowire arrays, \emph{Science} \textbf{312} (2006) 242--246. \url{https://doi.org/10.1126/science.1124005}
 \end{thebibliography}
 
 \end{document}
