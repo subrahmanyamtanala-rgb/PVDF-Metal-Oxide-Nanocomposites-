@@ -20,9 +20,13 @@ conditions; (d) power into a resistive load for neat and filled films.*
 | `pvdf_nano/interface.py` | Interphase volume fraction, specific area, interparticle distance, Debye length, surface-field dipole alignment, Tanaka multi-core layers |
 | `pvdf_nano/dielectric.py` | Maxwell–Garnett, Bruggeman, Lichtenecker, Yamada, coated-sphere / interphase model, percolation, MWS relaxation |
 | `pvdf_nano/piezo.py` | Signed 0-3 composite d33 (matrix + Furukawa filler term), g33, d33·g33 FoM, k33, constitutive relations |
-| `pvdf_nano/harvester.py` | Capacitance, charge, V_oc, matched-load power, bridge-rectifier charging, power density |
+| `pvdf_nano/harvester.py` | Capacitance, charge, V_oc, matched-load power with and without dielectric loss/leakage, bridge-rectifier charging, power density |
 | `pvdf_nano/materials.py` | Typical properties of PVDF phases and oxide fillers (ZnO, BaTiO3, PZT, KNN, TiO2, Fe3O4, Al2O3, SiO2) |
+| `pvdf_nano/nucleation.py` | Polar-phase nucleation laws (loading- and interphase-controlled) and least-squares fitting to measured FTIR data |
 | `examples/design_study.py` | Generates the figure above and a device comparison table |
+| `examples/reproduce_paper.py` | Regenerates every manuscript figure and writes every quoted number to `paper/results/` |
+| `paper/manuscript.tex`, `paper/manuscript.pdf` | Revised manuscript (LaTeX) |
+| `paper/response_to_reviewer.md` | Point-by-point response to the first review |
 | `tests/` | pytest suite checking limits, bounds and internal consistency |
 
 ## Quick start
@@ -31,6 +35,8 @@ conditions; (d) power into a resistive load for neat and filled films.*
 pip install -r requirements.txt
 python -m pytest            # run the tests
 python examples/design_study.py
+python examples/reproduce_paper.py   # manuscript figures and numbers
+cd paper && pdflatex manuscript.tex && pdflatex manuscript.tex
 ```
 
 ```python

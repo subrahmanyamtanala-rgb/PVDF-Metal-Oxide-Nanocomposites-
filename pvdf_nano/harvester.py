@@ -67,6 +67,57 @@ def load_voltage_amplitude(charge_amplitude, cap, frequency, resistance):
     return omega * charge_amplitude * r / np.sqrt(1 + (omega * r * cap) ** 2)
 
 
+def conduction_tan_delta(conductivity, eps_r, frequency):
+    """Loss tangent from DC conduction alone, sigma / (omega eps0 eps_r).
+
+    Grows as 1/f, so leakage matters most at the 1-10 Hz of body motion.
+    """
+    omega = 2 * np.pi * np.asarray(frequency, dtype=float)
+    return conductivity / (omega * EPS0 * eps_r)
+
+
+def _loss_conductance(cap, frequency, tan_delta, r_leak):
+    """Parallel loss conductance G = omega C tan(delta) + 1 / R_leak (S)."""
+    omega = 2 * np.pi * np.asarray(frequency, dtype=float)
+    g = omega * cap * np.asarray(tan_delta, dtype=float)
+    if r_leak is not None:
+        g = g + 1 / r_leak
+    return g
+
+
+def lossy_load_power(charge_amplitude, cap, frequency, resistance,
+                     tan_delta=0.0, r_leak=None):
+    """Average power (W) into a load R from a lossy piezoelectric source.
+
+    The source current omega Q0 divides between the film admittance
+    Y = G + j omega C (G from dielectric loss and leakage) and the load:
+
+        P = (omega Q0)^2 R / (2 [(1 + G R)^2 + (omega C R)^2])
+
+    Reduces to :func:`load_power` for G = 0.
+    """
+    omega = 2 * np.pi * np.asarray(frequency, dtype=float)
+    g = _loss_conductance(cap, frequency, tan_delta, r_leak)
+    r = np.asarray(resistance, dtype=float)
+    return (omega * charge_amplitude) ** 2 * r / (
+        2 * ((1 + g * r) ** 2 + (omega * cap * r) ** 2))
+
+
+def lossy_optimal_load(cap, frequency, tan_delta=0.0, r_leak=None):
+    """Matched load with loss, R_opt = 1 / |Y| = 1 / sqrt(G^2 + (omega C)^2)."""
+    omega = 2 * np.pi * np.asarray(frequency, dtype=float)
+    g = _loss_conductance(cap, frequency, tan_delta, r_leak)
+    return 1 / np.sqrt(g ** 2 + (omega * cap) ** 2)
+
+
+def lossy_max_power(charge_amplitude, cap, frequency, tan_delta=0.0, r_leak=None):
+    """Power at the lossy matched load, P_max = (omega Q0)^2 / (4 (|Y| + G))."""
+    omega = 2 * np.pi * np.asarray(frequency, dtype=float)
+    g = _loss_conductance(cap, frequency, tan_delta, r_leak)
+    y = np.sqrt(g ** 2 + (omega * cap) ** 2)
+    return (omega * charge_amplitude) ** 2 / (4 * (y + g))
+
+
 def bridge_charging(charge_amplitude, cap_p, cap_s, n_half_cycles, diode_drop=0.0):
     """Storage-capacitor voltage after each half-cycle through a full-wave bridge.
 

@@ -3,7 +3,7 @@ import math
 import numpy as np
 import pytest
 
-from pvdf_nano import dielectric, harvester, interface, materials, phases, piezo
+from pvdf_nano import dielectric, harvester, interface, materials, nucleation, phases, piezo
 from pvdf_nano.constants import EPS0, KB
 
 
@@ -199,3 +199,64 @@ def test_power_density_requires_one_normaliser():
     with pytest.raises(ValueError):
         harvester.power_density(1.0)
     assert harvester.power_density(2.0, area=4.0) == 0.5
+
+
+# --- nucleation ----------------------------------------------------------------
+
+def test_saturating_law_limits():
+    assert nucleation.saturating_law(0.0) == pytest.approx(0.50)
+    assert nucleation.saturating_law(10.0) == pytest.approx(0.85)
+
+
+def test_none_scenario_is_flat():
+    f0, df, s = nucleation.SCENARIOS["none"]
+    assert np.allclose(nucleation.saturating_law([0, 0.1, 0.3], f0, df, s), f0)
+
+
+def test_fit_recovers_parameters():
+    phi = np.array([0, 0.01, 0.02, 0.04, 0.06, 0.1, 0.15, 0.2])
+    f = nucleation.saturating_law(phi, 0.45, 0.30, 0.025)
+    fit = nucleation.fit_saturating_law(phi, f)
+    assert fit["f0"] == pytest.approx(0.45, abs=2e-3)
+    assert fit["delta_f"] == pytest.approx(0.30, abs=5e-3)
+    assert fit["phi_sat"] == pytest.approx(0.025, rel=0.05)
+    assert fit["rmse"] < 1e-3
+
+
+def test_fit_rejects_too_few_points():
+    with pytest.raises(ValueError):
+        nucleation.fit_saturating_law([0, 0.1], [0.5, 0.8])
+
+
+# --- lossy harvester -----------------------------------------------------------
+
+def test_lossy_power_reduces_to_lossless():
+    q0, cap, f = 1e-8, 1e-9, 10.0
+    r = np.logspace(5, 10, 50)
+    assert np.allclose(harvester.lossy_load_power(q0, cap, f, r),
+                       harvester.load_power(q0, cap, f, r))
+    assert harvester.lossy_max_power(q0, cap, f) == pytest.approx(
+        harvester.max_power(q0, cap, f))
+
+
+def test_lossy_matched_load_maximises_power():
+    q0, cap, f, tand = 1e-8, 1e-9, 5.0, 0.3
+    r = np.logspace(5, 11, 40001)
+    p = harvester.lossy_load_power(q0, cap, f, r, tan_delta=tand)
+    assert r[np.argmax(p)] == pytest.approx(
+        harvester.lossy_optimal_load(cap, f, tan_delta=tand), rel=0.01)
+    assert p.max() == pytest.approx(
+        harvester.lossy_max_power(q0, cap, f, tan_delta=tand), rel=1e-4)
+
+
+def test_loss_lowers_power():
+    q0, cap, f = 1e-8, 1e-9, 5.0
+    assert (harvester.lossy_max_power(q0, cap, f, tan_delta=0.2)
+            < harvester.lossy_max_power(q0, cap, f, tan_delta=0.02)
+            < harvester.max_power(q0, cap, f))
+
+
+def test_conduction_tan_delta_scales_inverse_frequency():
+    t1 = harvester.conduction_tan_delta(1e-10, 12, 1.0)
+    t10 = harvester.conduction_tan_delta(1e-10, 12, 10.0)
+    assert t1 / t10 == pytest.approx(10.0)
