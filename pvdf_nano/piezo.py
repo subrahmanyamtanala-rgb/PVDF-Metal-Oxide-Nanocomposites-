@@ -63,6 +63,36 @@ def matrix_d33(x_c, f_polar, d33_ref=D33_PVDF_REF, x_c_ref=XC_REF,
     return d33_ref * poling_efficiency * (x_c * f_polar) / (x_c_ref * f_polar_ref)
 
 
+def effective_polar_fraction(f_beta, f_gamma, alpha_gamma=1.0):
+    """Polar fraction weighted by phase activity, F_eff = F_beta + alpha_gamma * F_gamma.
+
+    alpha_gamma (0-1) is the piezoelectric activity of gamma crystallites
+    relative to beta; gamma has a smaller remanent polarization than beta.
+    """
+    if not 0 <= alpha_gamma <= 1:
+        raise ValueError("alpha_gamma must be in [0, 1]")
+    return f_beta + alpha_gamma * f_gamma
+
+
+def split_polar(f_polar, gamma_share):
+    """Split a total polar fraction into (F_beta, F_gamma) given the gamma share."""
+    if not 0 <= gamma_share <= 1:
+        raise ValueError("gamma_share must be in [0, 1]")
+    return f_polar * (1 - gamma_share), f_polar * gamma_share
+
+
+def electrostrictive_d33(eps_f, d33_ref=190e-12, eps_ref=1700.0):
+    """Filler d33 scaled with its permittivity, d33 = 2 Q eps0 eps_33 P_s.
+
+    For a perovskite with fixed spontaneous polarization P_s and
+    electrostrictive coefficient Q, d33 is proportional to eps_33. A
+    nanocrystal whose permittivity is reduced (e.g. by loss of 90-degree
+    domains) therefore has a proportionally reduced d33. This is an upper
+    estimate, because P_s is also reduced at small sizes.
+    """
+    return d33_ref * eps_f / eps_ref
+
+
 def composite_d33(phi, x_c, f_polar, eps_m, eps_f, c_m, c_f, d33_f,
                   filler_poling="parallel", poling_efficiency=1.0,
                   filler_poling_efficiency=1.0):

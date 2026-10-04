@@ -29,7 +29,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from pvdf_nano import dielectric, harvester, interface, nucleation, piezo  # noqa: E402
+from pvdf_nano import (dielectric, harvester, interface, nucleation, piezo,  # noqa: E402
+                       sensitivity)
 from pvdf_nano.materials import BATIO3, PVDF_BETA, ZNO  # noqa: E402
 
 FIG_DIR = os.path.join(ROOT, "paper", "figures")
@@ -239,7 +240,14 @@ SIZE_BASE = dict(phi=0.05, shell=5e-9, f0=0.50, delta_f=0.35, phi_i_sat=0.05)
 
 
 def size_point(f, diameter, eps_i=None, shell=None, delta_f=None, phi_i_sat=None,
-               eps_m=None, eta=1.0, d_ref=piezo.D33_PVDF_REF, tan_delta=0.0, phi=None):
+               eps_m=None, eta=1.0, d_ref=piezo.D33_PVDF_REF, tan_delta=0.0, phi=None,
+               eps_f=None, gamma_share=0.0, alpha_gamma=1.0, filler_poling="none",
+               d_f=None):
+    """One model evaluation for the size study, tornado and global sensitivity.
+
+    The nucleated polar phase is split into beta and gamma (``gamma_share``);
+    gamma is weighted by ``alpha_gamma``. The reference film is all-beta.
+    """
     p = SIZE_BASE
     phi = p["phi"] if phi is None else phi
     shell = p["shell"] if shell is None else shell
@@ -247,17 +255,22 @@ def size_point(f, diameter, eps_i=None, shell=None, delta_f=None, phi_i_sat=None
     phi_i_sat = p["phi_i_sat"] if phi_i_sat is None else phi_i_sat
     eps_m = M.eps_r if eps_m is None else eps_m
     eps_i = eps_m if eps_i is None else eps_i
+    eps_f = f.eps_r if eps_f is None else eps_f
+    d_f = f.d33 if d_f is None else d_f
     r = diameter / 2
     phi_i = interface.interphase_fraction(r, shell, phi)
     fp = float(nucleation.interphase_law(phi_i, p["f0"], delta_f, phi_i_sat))
-    eps_c = float(dielectric.interphase_maxwell_garnett(eps_m, f.eps_r, eps_i, phi, r, shell))
-    l_e = piezo.local_field_coefficient(eps_c, f.eps_r)
+    f_eff = piezo.effective_polar_fraction(*piezo.split_polar(fp, gamma_share), alpha_gamma)
+    eps_c = float(dielectric.interphase_maxwell_garnett(eps_m, eps_f, eps_i, phi, r, shell))
+    l_e = piezo.local_field_coefficient(eps_c, eps_f)
     l_t = piezo.local_stress_coefficient(M.youngs_modulus, f.youngs_modulus)
-    d_m = piezo.matrix_d33(X_C, fp, d33_ref=d_ref, poling_efficiency=eta)
-    d = (1 - phi) * d_m  # filler unpoled
+    d_m = piezo.matrix_d33(X_C, f_eff, d33_ref=d_ref, poling_efficiency=eta)
+    sign = {"parallel": 1.0, "antiparallel": -1.0, "none": 0.0}[filler_poling]
+    d = (1 - phi) * d_m + sign * phi * l_e * l_t * abs(d_f)
     out = film(d, eps_c, tan_delta=tan_delta)
     out.update({"diameter_nm": diameter * 1e9, "phi_i_pct": phi_i * 100, "f_polar": fp,
-                "L_E": l_e, "L_T": l_t})
+                "f_eff": f_eff, "L_E": l_e, "L_T": l_t,
+                "valid": bool(dielectric.coated_model_valid(phi, r, shell))})
     return out
 
 
@@ -400,6 +413,201 @@ def fig_tornado():
     summary["tornado"] = [(l, round(a, 1), round(b, 1)) for l, a, b in out[::-1]]
 
 
+# --- Table: beta/gamma weighting ---------------------------------------------------
+
+def table_beta_gamma():
+    """Effect of gamma share and gamma activity on the PVDF/ZnO 10 vol% film."""
+    phi = 0.10
+    fp = float(nucleation.saturating_law(phi, *nucleation.SCENARIOS["nominal"]))
+    eps = dielectric.maxwell_garnett(M.eps_r, ZNO.eps_r, phi)
+    rows = []
+    for share in (0.0, 0.25, 0.5):
+        for alpha in (1.0, 0.5, 0.25):
+            f_eff = piezo.effective_polar_fraction(*piezo.split_polar(fp, share), alpha)
+            d = piezo.composite_d33(phi, X_C, f_eff, filler_poling="none", **filler_args(ZNO))
+            rows.append([share, alpha, round(f_eff, 3), round(abs(d) * 1e12, 1),
+                         round(piezo.harvesting_fom(d, eps) * 1e12, 2)])
+    write_csv("table_beta_gamma", ["gamma_share", "alpha_gamma", "F_eff", "abs_d33_pCN",
+                                   "fom_e12"], rows)
+    summary["table_beta_gamma"] = rows
+
+
+# --- Table: BaTiO3 filler permittivity and the local-field argument ------------------
+
+def table_batio3_eps():
+    """Filler term at 10 vol% for bulk and nanocrystal BaTiO3 permittivities."""
+    phi = 0.10
+    fp = float(nucleation.saturating_law(phi, *nucleation.SCENARIOS["nominal"]))
+    d_m = abs(piezo.matrix_d33(X_C, fp)) * 1e12
+    l_t = piezo.local_stress_coefficient(M.youngs_modulus, BATIO3.youngs_modulus)
+    rows = []
+    for eps_f in (80.0, 200.0, 1700.0):
+        eps_c = dielectric.maxwell_garnett(M.eps_r, eps_f, phi)
+        l_e = piezo.local_field_coefficient(eps_c, eps_f)
+        for label, d_f in (("fixed 190 pC/N", BATIO3.d33),
+                           ("scaled with eps_f", piezo.electrostrictive_d33(eps_f))):
+            term = phi * l_e * l_t * d_f * 1e12
+            anti = (1 - phi) * d_m + term
+            par = (1 - phi) * d_m - term
+            rows.append([eps_f, label, round(d_f * 1e12, 1), round(eps_c, 1), round(l_e, 3),
+                         round(term, 2), round(anti, 1), round(par, 1),
+                         round(piezo.harvesting_fom(anti * 1e-12, eps_c) * 1e12, 2)])
+    write_csv("table_batio3_eps", ["eps_f", "d_f_rule", "d_f_pCN", "eps_c", "L_E",
+                                   "filler_term_pCN", "abs_d33_anti_pCN", "abs_d33_par_pCN",
+                                   "fom_anti_e12"], rows)
+    summary["table_batio3_eps"] = rows
+    summary["matrix_term_10vol_pCN"] = round((1 - phi) * d_m, 1)
+    summary["LE_dilute_eps80"] = round(piezo.local_field_coefficient(M.eps_r, 80.0), 3)
+    summary["LE_dilute_eps200"] = round(piezo.local_field_coefficient(M.eps_r, 200.0), 3)
+
+
+# --- Figure 8: Morris global screening -------------------------------------------------
+
+GLOBAL_BOUNDS = [
+    ("diameter", 20e-9, 100e-9, "log"),
+    ("shell", 2e-9, 10e-9, "lin"),
+    ("phi", 0.02, 0.06, "lin"),
+    ("delta_f", 0.10, 0.45, "lin"),
+    ("phi_i_sat", 0.02, 0.10, "log"),
+    ("eps_m", 10.0, 14.0, "lin"),
+    ("eps_i_ratio", 1.0, 2.5, "lin"),
+    ("eta", 0.7, 1.0, "lin"),
+    ("d_ref", 20e-12, 35e-12, "lin"),
+    ("tan_delta", 0.0, 0.10, "lin"),
+    ("gamma_share", 0.0, 0.5, "lin"),
+    ("alpha_gamma", 0.25, 1.0, "lin"),
+    ("eps_f", None, None, "log"),
+]
+EPS_F_RANGE = {"ZnO": (8.0, 11.0), "BaTiO3": (80.0, 1700.0)}
+LABELS = {"diameter": "particle diameter", "shell": "interphase thickness t",
+          "phi": "filler loading", "delta_f": "max. polar gain ΔF",
+          "phi_i_sat": "nucleation saturation", "eps_m": "matrix permittivity",
+          "eps_i_ratio": "interphase permittivity ε$_i$/ε$_m$", "eta": "poling efficiency η",
+          "d_ref": "reference |d33|", "tan_delta": "loss tangent",
+          "gamma_share": "γ share of polar phase", "alpha_gamma": "γ activity α$_γ$",
+          "eps_f": "filler permittivity"}
+
+
+def bounds_for(f):
+    lo, hi = EPS_F_RANGE[f.name]
+    return [b if b[0] != "eps_f" else ("eps_f", lo, hi, "log") for b in GLOBAL_BOUNDS]
+
+
+def global_model(f, filler_poling="none", d_f_rule="scaled"):
+    def model(p):
+        d_f = None
+        if f.name == "BaTiO3" and d_f_rule == "scaled":
+            d_f = piezo.electrostrictive_d33(p["eps_f"])
+        return size_point(f, p["diameter"], eps_i=p["eps_i_ratio"] * p["eps_m"],
+                          shell=p["shell"], delta_f=p["delta_f"], phi_i_sat=p["phi_i_sat"],
+                          eps_m=p["eps_m"], eta=p["eta"], d_ref=-p["d_ref"],
+                          tan_delta=p["tan_delta"], phi=p["phi"], eps_f=p["eps_f"],
+                          gamma_share=p["gamma_share"], alpha_gamma=p["alpha_gamma"],
+                          filler_poling=filler_poling, d_f=d_f)["p_max_nW"]
+    return model
+
+
+def fig_morris():
+    fig, axes = plt.subplots(1, 2, figsize=(7.0, 3.8), sharey=True)
+    rows = []
+    results = {f.name: sensitivity.morris(global_model(f), bounds_for(f), r=60, seed=7)
+               for f in (ZNO, BATIO3)}
+    order = sorted(results["ZnO"], key=lambda n: results["ZnO"][n]["mu_star"])
+    y = np.arange(len(order))
+    for ax, f in zip(axes, (ZNO, BATIO3)):
+        res = results[f.name]
+        mu = [res[n]["mu_star"] for n in order]
+        sig = [res[n]["sigma"] for n in order]
+        ax.barh(y, mu, color=ACCENT, height=0.6, label="μ* (mean |effect|)")
+        ax.plot(sig, y, "o", color=INK2, ms=4, label="σ (nonlinearity/interaction)")
+        ax.set_yticks(y, [LABELS[n] for n in order])
+        style(ax, f"PVDF/{f.name}", "Effect on P$_{max}$ (nW)", "")
+        ax.tick_params(axis="y", labelsize=7)
+        for n, v in res.items():
+            rows.append((f.name, n, round(v["mu_star"], 3), round(v["mu"], 3), round(v["sigma"], 3)))
+        summary[f"morris_{f.name}"] = [(n, round(res[n]["mu_star"], 2), round(res[n]["sigma"], 2))
+                                       for n in sorted(res, key=lambda k: -res[k]["mu_star"])]
+    axes[1].legend(frameon=False, fontsize=7, loc="lower right")
+    save(fig, "fig8_morris")
+    write_csv("fig8_morris", ["filler", "parameter", "mu_star_nW", "mu_nW", "sigma_nW"], rows)
+
+
+# --- Paired Latin-hypercube comparison of ZnO and BaTiO3 -------------------------------
+
+def lhs_comparison(n=2000):
+    shared = [b for b in GLOBAL_BOUNDS if b[0] != "eps_f"]
+    x = sensitivity.latin_hypercube(shared + [("u_eps_zn", 0.0, 1.0, "lin"),
+                                              ("u_eps_bt", 0.0, 1.0, "lin")], n, seed=11)
+    names = [b[0] for b in shared]
+    out = {}
+    for case, poling, rule in (("unpoled", "none", "scaled"),
+                               ("antiparallel, d_f scaled", "antiparallel", "scaled"),
+                               ("antiparallel, d_f fixed", "antiparallel", "fixed")):
+        mz, mb = global_model(ZNO, poling), global_model(BATIO3, poling, rule)
+        pz, pb = [], []
+        for row in x:
+            p = dict(zip(names, row[:len(names)]))
+            ez = EPS_F_RANGE["ZnO"][0] + row[-2] * np.diff(EPS_F_RANGE["ZnO"])[0]
+            lo, hi = EPS_F_RANGE["BaTiO3"]
+            eb = float(np.exp(np.log(lo) + row[-1] * (np.log(hi) - np.log(lo))))
+            pz.append(mz({**p, "eps_f": ez}))
+            pb.append(mb({**p, "eps_f": eb}))
+        pz, pb = np.array(pz), np.array(pb)
+        ratio = pz / pb
+        out[case] = {"p_zno_gt_bto": round(float(np.mean(pz > pb)), 3),
+                     "ratio_p5": round(float(np.percentile(ratio, 5)), 2),
+                     "ratio_median": round(float(np.median(ratio)), 2),
+                     "ratio_p95": round(float(np.percentile(ratio, 95)), 2),
+                     "zno_pmax_p5_p50_p95": [round(float(np.percentile(pz, q)), 1)
+                                             for q in (5, 50, 95)],
+                     "bto_pmax_p5_p50_p95": [round(float(np.percentile(pb, q)), 1)
+                                             for q in (5, 50, 95)]}
+    summary["lhs_comparison"] = out
+    write_csv("lhs_comparison", ["case", "p_zno_gt_bto", "ratio_p5", "ratio_median",
+                                 "ratio_p95"],
+              [[k, v["p_zno_gt_bto"], v["ratio_p5"], v["ratio_median"], v["ratio_p95"]]
+               for k, v in out.items()])
+
+
+# --- Figure 9: literature benchmark of the nucleation law ----------------------------
+
+# Bagla et al., arXiv:2502.16547 (2025), Table 1: electrospun PVDF with carbon-coated
+# ZnO nanoparticles (NP) and nanorods (NR). wt% -> (X_c %, F_beta %) as reported.
+BAGLA = {
+    "nanoparticles": [(0.0, 41.9, 83.0), (0.5, 68.1, 91.0), (1.0, 64.9, 92.0), (2.0, 65.0, 95.0)],
+    "nanorods": [(0.0, 41.9, 83.0), (0.5, 68.8, 93.0), (1.0, 72.1, 92.0), (2.0, 76.1, 92.0)],
+}
+
+
+def wt_to_vol(w, rho_f=ZNO.density, rho_m=M.density):
+    return (w / rho_f) / (w / rho_f + (1 - w) / rho_m)
+
+
+def fig_benchmark():
+    fig, ax = plt.subplots(figsize=(6.0, 3.3))
+    fits = {}
+    rows = []
+    for (name, data), color, marker in zip(BAGLA.items(), (ACCENT, GREY), ("o", "s")):
+        phi = np.array([wt_to_vol(w / 100) for w, _, _ in data])
+        polar = np.array([xc * fb / 1e4 for _, xc, fb in data])
+        fit = nucleation.fit_saturating_law(phi, polar, np.geomspace(1e-5, 0.05, 600))
+        fit["phi_sat_resolved"] = fit["phi_sat"] > 2e-5
+        fits[name] = {k: (round(v, 5) if not isinstance(v, bool) else v) for k, v in fit.items()}
+        grid = np.linspace(0, phi.max() * 1.1, 200)
+        ax.plot(phi * 100, polar, marker, color=color, ms=6, label=f"measured, {name}")
+        ax.plot(grid * 100, nucleation.saturating_law(grid, fit["f0"], fit["delta_f"],
+                                                      fit["phi_sat"]),
+                color=color, lw=1.5, label=f"fit, {name}")
+        rows += [(name, p * 100, v) for p, v in zip(phi, polar)]
+    style(ax, "Polar crystalline content X$_c$F vs ZnO loading (Bagla et al. 2025)",
+          "ZnO loading (vol%)", "X$_c$·F$_{EA}$")
+    ax.legend(frameon=False, fontsize=7, loc="lower right")
+    save(fig, "fig9_benchmark")
+    write_csv("fig9_benchmark", ["morphology", "vol_pct", "xc_times_f"], rows)
+    summary["benchmark_fits"] = fits
+    summary["benchmark_vol_pct_of_2wt"] = round(wt_to_vol(0.02) * 100, 3)
+
+
 def main():
     os.makedirs(FIG_DIR, exist_ok=True)
     os.makedirs(RES_DIR, exist_ok=True)
@@ -411,6 +619,11 @@ def main():
     fig_frequency()
     table_devices()
     fig_tornado()
+    table_beta_gamma()
+    table_batio3_eps()
+    fig_morris()
+    lhs_comparison()
+    fig_benchmark()
     with open(os.path.join(RES_DIR, "summary.json"), "w") as fh:
         json.dump(summary, fh, indent=1, default=float)
     print(json.dumps(summary, indent=1, default=float))

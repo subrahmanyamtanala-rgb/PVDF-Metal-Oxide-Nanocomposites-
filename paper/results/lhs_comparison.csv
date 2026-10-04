@@ -1,0 +1,4 @@
+case,p_zno_gt_bto,ratio_p5,ratio_median,ratio_p95
+unpoled,1.0,1.07,1.12,1.2
+"antiparallel, d_f scaled",1.0,1.13,1.25,1.4
+"antiparallel, d_f fixed",0.566,0.63,1.04,1.3

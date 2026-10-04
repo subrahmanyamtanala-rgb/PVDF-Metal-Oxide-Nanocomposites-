@@ -260,3 +260,57 @@ def test_conduction_tan_delta_scales_inverse_frequency():
     t1 = harvester.conduction_tan_delta(1e-10, 12, 1.0)
     t10 = harvester.conduction_tan_delta(1e-10, 12, 10.0)
     assert t1 / t10 == pytest.approx(10.0)
+
+
+# --- beta/gamma weighting, electrostrictive scaling, validity ---------------------
+
+def test_effective_polar_fraction():
+    assert piezo.effective_polar_fraction(0.6, 0.2, 1.0) == pytest.approx(0.8)
+    assert piezo.effective_polar_fraction(0.6, 0.2, 0.5) == pytest.approx(0.7)
+    with pytest.raises(ValueError):
+        piezo.effective_polar_fraction(0.6, 0.2, 1.5)
+
+
+def test_split_polar_conserves_total():
+    fb, fg = piezo.split_polar(0.8, 0.25)
+    assert fb + fg == pytest.approx(0.8) and fg == pytest.approx(0.2)
+
+
+def test_electrostrictive_scaling_keeps_filler_term_nearly_constant():
+    # L_E * d_f tends to 3 eps_c * d_ref / eps_ref when eps_f >> eps_c.
+    eps_c = 15.0
+    terms = [piezo.local_field_coefficient(eps_c, ef) * piezo.electrostrictive_d33(ef)
+             for ef in (300.0, 1700.0, 5000.0)]
+    assert terms[0] == pytest.approx(terms[2], rel=0.1)
+
+
+def test_coated_validity_criterion():
+    assert dielectric.coated_model_valid(0.05, 5e-9, 5e-9)        # 0.40
+    assert not dielectric.coated_model_valid(0.05, 3.5e-9, 5e-9)  # 0.72
+
+
+# --- sensitivity ---------------------------------------------------------------------
+
+from pvdf_nano import sensitivity  # noqa: E402
+
+
+def test_latin_hypercube_strata():
+    bounds = [("a", 0.0, 1.0, "lin"), ("b", 1.0, 100.0, "log")]
+    x = sensitivity.latin_hypercube(bounds, 50, seed=1)
+    counts = np.histogram(x[:, 0], bins=50, range=(0, 1))[0]
+    assert np.all(counts == 1)
+    assert x[:, 1].min() >= 1.0 and x[:, 1].max() <= 100.0
+
+
+def test_morris_linear_and_inert():
+    bounds = [("a", 0.0, 1.0, "lin"), ("b", 0.0, 1.0, "lin")]
+    res = sensitivity.morris(lambda p: 3 * p["a"], bounds, r=20, seed=2)
+    assert res["a"]["mu_star"] == pytest.approx(3.0)
+    assert res["a"]["sigma"] == pytest.approx(0.0, abs=1e-12)
+    assert res["b"]["mu_star"] == pytest.approx(0.0, abs=1e-12)
+
+
+def test_morris_detects_interaction():
+    bounds = [("a", 0.0, 1.0, "lin"), ("b", 0.0, 1.0, "lin")]
+    res = sensitivity.morris(lambda p: p["a"] * p["b"], bounds, r=40, seed=3)
+    assert res["a"]["sigma"] > 0.1

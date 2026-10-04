@@ -70,6 +70,24 @@ def coated_sphere(eps_core, eps_shell, radius, thickness):
     return eps_shell * (s + 2 * q * d) / (s - q * d)
 
 
+COATED_FRACTION_LIMIT = 0.5
+
+
+def coated_volume_fraction(phi, radius, thickness):
+    """Volume fraction of particles plus shells, phi * (1 + t/r)^3."""
+    return phi * (1 + thickness / radius) ** 3
+
+
+def coated_model_valid(phi, radius, thickness, limit=COATED_FRACTION_LIMIT):
+    """True when the coated spheres fill at most ``limit`` of the composite.
+
+    Above roughly 0.5 the shells overlap strongly and Maxwell-Garnett mixing of
+    isolated coated spheres is no longer meaningful; calculations are stopped
+    there rather than extrapolated.
+    """
+    return coated_volume_fraction(phi, radius, thickness) <= limit
+
+
 def interphase_maxwell_garnett(eps_m, eps_f, eps_i, phi, radius, thickness):
     """Three-phase (matrix / interphase / filler) Maxwell-Garnett permittivity.
 
